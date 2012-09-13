@@ -1,0 +1,155 @@
+package tasks;
+use Dancer ':syntax';
+set serializer => 'JSON';
+use DBIx::Class;
+
+our $VERSION = '0.1';
+
+my $tasks = {};
+
+=pod
+
+{
+   test => {
+      '00000001' => {
+         parent_id => undef,
+         category_id => undef,
+         task => 'Go to store',
+      },
+      '00000003' => {
+         parent_id => undef,
+         category_id => undef,
+         task => 'Buy ice cream',
+      },
+   },
+   notadmin => {
+      '00000002' => {
+         parent_id => undef,
+         category_id => undef,
+         task => 'Remove stain',
+      },
+   }
+};
+
+=cut
+
+my $format = sub {
+   my ($task_id, $success) = @_;
+   {
+      id => $task_id,
+      success => defined $success ? $success : 1,
+      self => '/task/' . $task_id,
+      %{ $tasks->{ session 'user' }->{$task_id} },
+   };
+};
+
+my $error_out = sub {
+   send_error('You either do not have access or you have attempted something that is not allowed');
+};
+
+get '/' => sub {
+   return 'Nothing to see here.  Move along.';
+};
+
+post '/login' => sub {
+   # change session backend to either storable, memcached, or mongodb
+
+=pod
+   my $user = param('user');
+   my $pass = param('pass');
+
+   unless (defined $user && $user && defined $pass && $pass) {
+      return $error_out->();
+   }
+
+   if ($user eq 'test' && $pass eq 'camelBack') {
+      session 'user' => $user;
+   }
+   if ($user eq 'admin' && $pass eq 'camelBack') {
+      session 'user' => $user;
+   }
+   elsif ($user eq 'admin') {
+      session 'user' => 'notadmin';
+   }
+   else {
+      session 'user' => $user;
+   }
+
+   {
+      success => 1,
+      error => 'You are now logged in as ' . session('user') . '.  Continue.',
+   }
+
+=cut
+
+};
+
+hook 'before' => sub {
+   # needs to be implemented eventually
+   session 'user' => param('user');
+   #if (!session('user') && request->path_info !~ m{^/login}) {
+   #   request->path_info('/logininvalid')
+   #}
+};
+
+# list all tasks
+get '/tasks' => sub {
+   return {
+      map { $_,  $format->( $_ ) } keys %{ $tasks->{ session 'user' } }
+   };
+};
+
+get '/logininvalid' => sub {
+   {
+      success => 0,
+      error => 'You are not logged in.  Exiting.',
+   }
+};
+
+prefix '/task' => sub {
+
+   # get the details of a specific task
+   get '/:name' => sub {
+      if (not exists $tasks->{session 'user'}->{ param('name') }) {
+         $error_out->();
+      }
+
+      $format->( param('name') );
+   };
+
+   # create a task
+   post '/' => sub {
+      my ($highest) = reverse sort keys %{$tasks->{session 'user'} };
+      my $next = sprintf('%08d', $highest + 1);
+      $tasks->{session 'user'}->{ $next } = {
+         parent_id => undef,
+         category_id => undef,
+         task => param('task'),
+      };
+
+      $format->( $next );
+   };
+
+   # update a task
+   put '/:name' => sub {
+      my $task = $tasks->{session 'user'}->{param('name')};
+
+      if (not defined $task) {
+         $error_out->();
+      }
+
+      $task->{'task'}        = param('task') if defined param('task');
+      $task->{'parent_id'}   = param('task') if defined param('parent_id');
+      $task->{'category_id'} = param('task') if defined param('category_id');
+      $task->{'owner_id'}    = param('task') if defined param('owner_id');
+
+      $format->( param('name') );
+   };
+
+   # delete a task
+   del '/:name' => sub {
+      {success => defined delete $tasks->{session 'user'}->{param('name')} ? 1 : 0 };
+   };
+};
+
+true;
