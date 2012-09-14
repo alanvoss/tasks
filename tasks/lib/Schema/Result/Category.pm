@@ -12,11 +12,6 @@ __PACKAGE__->add_columns(
       is_auto_increment => 1,
       default_value => undef,
    },
-   'parent' => {
-      data_type => 'INT',
-      is_nullable => 0,
-      default_value => undef,
-   },
    'category' => {
       data_type => 'VARCHAR',
       is_nullable => 0,
@@ -26,13 +21,10 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->set_primary_key('category_id');
-__PACKAGE__->has_many(subcategories => 'Schema::Result::Category', 'parent_id');
+__PACKAGE__->add_unique_constraint(['category']);
 
-
-
-
-__PACKAGE__->has_many(subcategories => 'Schema::Result::Category', 'parent_id');
-__PACKAGE__->belongs_to(parentcategory => 'Schema::Result::Category', 'parent_id');
-__PACKAGE__->has_many(tasks => 'Schema::Result::Category', 'parent_id');
+# users that have this category currently defined
+__PACKAGE__->has_many('user_categories' => 'Schema::Result::UserCategory', 'category_id');
+__PACKAGE__->many_to_many('users' => 'user_categories', 'user_id');
 
 1;

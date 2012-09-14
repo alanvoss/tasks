@@ -27,6 +27,15 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->set_primary_key('user_id');
-__PACKAGE__->has_many(tasks => 'Schema::Result::Task', 'user_id');
+__PACKAGE__->add_unique_constraint(['user']);
+
+__PACKAGE__->has_many('user_categories' => 'Schema::Result::UserCategory', 'user_id');
+__PACKAGE__->many_to_many('categories' => 'user_categories', 'category_id');
+
+__PACKAGE__->has_many('user_category_shares' => 'Schema::Result::UserCategoryShare', 'user_id');
+__PACKAGE__->many_to_many('category_shares' => 'user_category_shares', 'user_category_id');
+
+__PACKAGE__->has_many('user_tasks' => 'Schema::Result::UserTask', 'user_id');
+__PACKAGE__->many_to_many('tasks' => 'user_tasks', 'task_id');
 
 1;

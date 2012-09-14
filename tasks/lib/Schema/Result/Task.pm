@@ -12,21 +12,6 @@ __PACKAGE__->add_columns(
       is_auto_increment => 1,
       default_value => undef,
    },
-   'category_id' => {
-      data_type => 'INT',
-      is_nullable => 0,
-      default_value => undef,
-   },
-   'parent_id' => {
-      data_type => 'INT',
-      is_nullable => 1,
-      default_value => undef,
-   },
-   'user_id' => {
-      data_type => 'INT',
-      is_nullable => 0,
-      default_value => undef,
-   },
    'task' => {
       data_type => 'VARCHAR',
       is_nullable => 0,
@@ -36,9 +21,9 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->set_primary_key('task_id');
-__PACKAGE__->has_many(subtasks => 'Schema::Result::Task', 'parent_id');
-__PACKAGE__->belongs_to(user => 'Schema::Result::User', 'user_id');
-__PACKAGE__->belongs_to(category => 'Schema::Result::Category', 'category_id');
-__PACKAGE__->belongs_to(parenttask => 'Schema::Result::Task', 'parent_id');
+__PACKAGE__->add_unique_constraint(['task']);
+
+__PACKAGE__->has_many('user_tasks' => 'Schema::Result::UserTask', 'task_id');
+__PACKAGE__->many_to_many('users' => 'user_tasks', 'user_id');
 
 1;

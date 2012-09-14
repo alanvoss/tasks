@@ -1,41 +1,108 @@
 -- 
 -- Created by SQL::Translator::Producer::MySQL
--- Created on Thu Sep  6 20:05:44 2012
+-- Created on Thu Sep 13 20:05:57 2012
 -- 
 SET foreign_key_checks=0;
+--
 -- Table: `categories`
 --
 CREATE TABLE `categories` (
   `category_id` integer NOT NULL auto_increment,
-  `parent_id` integer,
   `category` VARCHAR(255) NOT NULL,
-  INDEX `categories_idx_parent_id` (`parent_id`),
   PRIMARY KEY (`category_id`),
-  CONSTRAINT `categories_fk_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE ON UPDATE CASCADE
+  UNIQUE `categories_category` (`category`)
 ) ENGINE=InnoDB;
+--
+-- Table: `tasks`
+--
+CREATE TABLE `tasks` (
+  `task_id` integer NOT NULL auto_increment,
+  `task` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`task_id`),
+  UNIQUE `tasks_task` (`task`)
+) ENGINE=InnoDB;
+--
 -- Table: `users`
 --
 CREATE TABLE `users` (
   `user_id` integer NOT NULL auto_increment,
   `user` VARCHAR(100) NOT NULL,
   `secret` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`user_id`)
+  PRIMARY KEY (`user_id`),
+  UNIQUE `users_user` (`user`)
 ) ENGINE=InnoDB;
--- Table: `tasks`
 --
-CREATE TABLE `tasks` (
-  `task_id` integer NOT NULL auto_increment,
-  `category_id` integer NOT NULL,
-  `parent_id` integer,
+-- Table: `user_categories`
+--
+CREATE TABLE `user_categories` (
+  `user_category_id` integer NOT NULL auto_increment,
   `user_id` integer NOT NULL,
-  `task` VARCHAR(255) NOT NULL,
-  INDEX `tasks_idx_category_id` (`category_id`),
-  INDEX `tasks_idx_parent_id` (`parent_id`),
-  INDEX `tasks_idx_user_id` (`user_id`),
-  PRIMARY KEY (`task_id`),
-  CONSTRAINT `tasks_fk_category_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`),
-  CONSTRAINT `tasks_fk_parent_id` FOREIGN KEY (`parent_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `tasks_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+  `category_id` integer NOT NULL,
+  INDEX `user_categories_idx_category_id` (`category_id`),
+  INDEX `user_categories_idx_user_id` (`user_id`),
+  PRIMARY KEY (`user_category_id`),
+  UNIQUE `user_categories_user_id_category_id` (`user_id`, `category_id`),
+  CONSTRAINT `user_categories_fk_category_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `user_categories_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
-
+--
+-- Table: `user_tasks`
+--
+CREATE TABLE `user_tasks` (
+  `user_task_id` integer NOT NULL auto_increment,
+  `user_id` integer NOT NULL,
+  `task_id` integer NOT NULL,
+  `parent_user_task_id` integer NOT NULL,
+  `complete` TINYINT NOT NULL DEFAULT 0,
+  INDEX `user_tasks_idx_parent_user_task_id` (`parent_user_task_id`),
+  INDEX `user_tasks_idx_task_id` (`task_id`),
+  INDEX `user_tasks_idx_user_id` (`user_id`),
+  PRIMARY KEY (`user_task_id`),
+  UNIQUE `user_tasks_user_id_task_id` (`user_id`, `task_id`),
+  CONSTRAINT `user_tasks_fk_parent_user_task_id` FOREIGN KEY (`parent_user_task_id`) REFERENCES `user_tasks` (`user_task_id`),
+  CONSTRAINT `user_tasks_fk_task_id` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `user_tasks_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+--
+-- Table: `user_category_relationship`
+--
+CREATE TABLE `user_category_relationship` (
+  `user_category_relationship_id` integer NOT NULL auto_increment,
+  `parent_user_category_id` integer NOT NULL,
+  `child_user_category_id` integer NOT NULL,
+  INDEX `user_category_relationship_idx_child_user_category_id` (`child_user_category_id`),
+  INDEX `user_category_relationship_idx_parent_user_category_id` (`parent_user_category_id`),
+  PRIMARY KEY (`user_category_relationship_id`),
+  UNIQUE `user_category_relationship_child_user_category_id` (`child_user_category_id`),
+  CONSTRAINT `user_category_relationship_fk_child_user_category_id` FOREIGN KEY (`child_user_category_id`) REFERENCES `user_categories` (`user_category_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `user_category_relationship_fk_parent_user_category_id` FOREIGN KEY (`parent_user_category_id`) REFERENCES `user_categories` (`user_category_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+--
+-- Table: `user_category_shares`
+--
+CREATE TABLE `user_category_shares` (
+  `user_category_share_id` integer NOT NULL auto_increment,
+  `user_category_id` integer NOT NULL,
+  `user_id` integer NOT NULL,
+  INDEX `user_category_shares_idx_user_category_id` (`user_category_id`),
+  INDEX `user_category_shares_idx_user_id` (`user_id`),
+  PRIMARY KEY (`user_category_share_id`),
+  UNIQUE `user_category_shares_user_category_id_user_id` (`user_category_id`, `user_id`),
+  CONSTRAINT `user_category_shares_fk_user_category_id` FOREIGN KEY (`user_category_id`) REFERENCES `user_categories` (`user_category_id`),
+  CONSTRAINT `user_category_shares_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+--
+-- Table: `user_task_categories`
+--
+CREATE TABLE `user_task_categories` (
+  `user_task_category_id` integer NOT NULL auto_increment,
+  `user_task_id` integer NOT NULL,
+  `user_category_id` integer NOT NULL,
+  INDEX `user_task_categories_idx_user_category_id` (`user_category_id`),
+  INDEX `user_task_categories_idx_user_task_id` (`user_task_id`),
+  PRIMARY KEY (`user_task_category_id`),
+  UNIQUE `user_task_categories_user_task_id_user_category_id` (`user_task_id`, `user_category_id`),
+  CONSTRAINT `user_task_categories_fk_user_category_id` FOREIGN KEY (`user_category_id`) REFERENCES `user_categories` (`user_category_id`),
+  CONSTRAINT `user_task_categories_fk_user_task_id` FOREIGN KEY (`user_task_id`) REFERENCES `user_tasks` (`user_task_id`)
+) ENGINE=InnoDB;
 SET foreign_key_checks=1;
